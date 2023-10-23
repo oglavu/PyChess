@@ -1,46 +1,16 @@
+"""
+Server receives data formated as string of lenght 8.
+If chars are digits, they are handled as (x, y) cordinates.
+If chars are letters, they are handled as messages.
+"""
+
 import socket
 import threading
 import consts
 
-class LRU_Cache:
-    def __init__(self, capacity, firstUser):
-        self.currUser = firstUser
-        self.currUserCount = 0
-        self.capacity = capacity
-        self.lst = []
-        self.saved = False
-    def add(self, data, user):
-        self.currUserCount += 1
-        if (self.currUser != user and self.currUserCount >= self.capacity):
-            self.currUser = (self.currUser + 1) % 2
-            self.currUserCount = 1
-            self.lst.append(data)
-        elif self.currUser != user:
-            return
-        elif self.currUser == user and self.currUserCount > self.capacity:
-            self.lst.pop(-2)
-            self.lst.append(data)
-        else:
-            self.lst.append(data)
-    def clear(self):
-        self.__init__(self.capacity, self.currUser)
-    def prepareLog(self):
-        s = ""
-        for i in range(1, len(self.lst)):
-            s += self.lst[i-1].decode("utf-8") + ':'
-            s += self.lst[i].decode("utf-8") + ','
-        s += '\n'
-        return s
-    def writeLog(self):
-        if not self.saved:
-            with open(consts.LOG_FILE_NAME, "a") as f:
-                f.write(self.prepareLog())
-            self.saved = True
-
 
 #Variables for holding information about connections
 connections = []
-cache = LRU_Cache(capacity=2, firstUser=0)
 
 #Client class, new instance created for each connected client
 #Each instance has the socket and address that is associated with items
@@ -74,24 +44,20 @@ class Client(threading.Thread):
                 print("[CLIENT] ID " + str(self.id) + ": " + pos_to_tile(data.decode("utf-8")))
                 if data.decode("utf-8") == consts.DISCONNECT_MESSAGE:
                     self.signal = False
-                elif data.decode("utf-8") == consts.REMATCH_MESSAGE:
-                    cache.writeLog()
-                    cache.clear()
-                else:
-                    cache.add(data, self.id)
                 for client in connections:
                     if client.id != self.id:
                         client.socket.sendall(data)
         
         connections.remove(self)
         print("[SERVER] Client " + str(self.address) + " has disconnected")
-        cache.writeLog()
         print("[SERVER] This game has been saved")
 
 #Wait for new connections
 def newConnections(socket):
     while True:
         sock, address = socket.accept()
+        # if more then 2 clients try to connect to server
+        # do not accept them
         if len(connections) == 2:
             sock.sendall(consts.DISCONNECT_MESSAGE.encode("utf-8"))
         else:
@@ -99,7 +65,8 @@ def newConnections(socket):
             connections.append(c)
             connections[-1].start()
             print("[SERVER] New connection at ID " + str(connections[-1]))
-            if not len(connections) % 2:
+            # send clients ready message
+            if len(connections) == 2:
                 connections[-1].socket.sendall("ready000".encode("utf-8"))
                 connections[-2].socket.sendall("ready000".encode("utf-8"))
 
