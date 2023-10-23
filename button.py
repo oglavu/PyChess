@@ -24,6 +24,8 @@ class Button:
 
         self.rel_x = centerx - self.width // 2
         self.rel_y = centery - self.height // 2
+        # handle (abs) positions used for mouse
+        # collision differently
         if isinstance(type, Menu):
             self.abs_x = self.rel_x + (consts.WIDTH + 2 * consts.MARGIN - consts.END_GAME_MENU_SIZE) // 2
             self.abs_y = self.rel_y + (consts.HEIGHT + 2 * consts.HEADER - consts.END_GAME_MENU_SIZE) // 2
