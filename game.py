@@ -7,7 +7,7 @@ Modules:
 *client.py - contains Client class that handles data exchange with server
 *consts.py - contains all constants used in-game
 *figure.py - contains a class for each of chess pieces
-*game.py - main script that runs most of GUI and state-chaning
+*game.py - main script that runs most of GUI and state-changing
 *pieces.py - initialieses all chess pieces
 *server.py - handles data exchange between clients
 *images - folder containing all images for chess pieces
@@ -45,9 +45,9 @@ class Game:
         self.board_overlay.set_alpha(200)
 
         pg.display.set_caption("Chess")
-        pg.display.set_icon(pg.image.load("images\KNIGHT_WHITE.png"))
+        pg.display.set_icon(pg.image.load("images\KNIGHT_WHITE.png").convert_alpha())
 
-        # importing list of initialises pieces
+        # importing list of initialised pieces
         self.pieces = pieces.get_pieces()
         # dict containing list of eaten pieces from both black and white player
         self.eaten = {"white": [], "black": []}
@@ -210,7 +210,7 @@ class Game:
                     self.client.data = None
                     self.play()
 
-            # handling different non-tuple messages
+            # handling different text messages
             if self.client.data == consts.DISCONNECT_MESSAGE:
                 self.MainMenu = True
                 self.end = False
@@ -386,6 +386,10 @@ class Game:
                 self.save_king(i)
 
     def PosToTile(self, pos: tuple[int]):
+        """
+        Returns the tile in which cursor is,
+        returns None if mouse is outside the board
+        """
         x, y = pos
         if (consts.MARGIN <= x <= consts.MARGIN + consts.WIDTH or
                     consts.HEADER <= y <= consts.HEADER + consts.HEIGHT):
@@ -434,6 +438,10 @@ class Game:
             king.ableToCastle(self.get_rooks(king.color), self.get_attacked(king.color), self.get_taken_tiles(("white", "black")))
 
     def set_buttons(self):
+        """
+        After every turn, update which 
+        surrender and draw buttons are accessible
+        """
         if self.singleplayer:
             self.SurrenderBlackBtn.active = (self.SurrenderBlackBtn.active + 1) % 2
             self.SurrenderWhiteBtn.active = (self.SurrenderBlackBtn.active + 1) % 2
@@ -457,6 +465,10 @@ class Game:
                 self.DrawWhiteBtn.active = 0
     
     def play(self):
+        """
+        Handles in-game clicks
+        """
+        #Draw and surrender buttons clicked
         if self.DrawWhiteBtn.isOver(self.mouse_pos) or self.DrawBlackBtn.isOver(self.mouse_pos):
             if self.singleplayer:
                 self.singleplayer = False
@@ -479,6 +491,11 @@ class Game:
                 self.client.declare_surrender()
             self.end = True
             self.turn = "black"
+
+        # if there is no active (selected) piece select one
+        # if there is active piece, check wheater click was over some 
+        # of the walkable tiles of the active piece, and if so
+        # switch to the next turn
         elif self.active_piece:
             tile = self.PosToTile(self.mouse_pos)
             if tile in self.active_piece.where_to_go:
@@ -503,6 +520,7 @@ class Game:
             if self.active_piece: 
                 self.isChecked()
 
+        # Check if opponent was mated
         if self.end:
             self.singleplayer = False
             self.online = False
@@ -517,16 +535,19 @@ class Game:
     def draw_main_menu(self):
         self.menu.fill(consts.WHITE)
 
+        # Welcome! sign
         sign1 = self.FONT.render("Welcome!", True, consts.GRAY)
         X = consts.END_GAME_MENU_SIZE // 2 - sign1.get_width()//2
         Y = consts.END_GAME_MENU_SIZE // 5 - sign1.get_height()//2
         self.menu.blit(sign1, (X, Y))
 
+        # [online] Disconnected opponent sign
         if self.discSign:
             sign2 = self.font.render("Opponent has disconnected", True, consts.GRAY)
             X = consts.END_GAME_MENU_SIZE // 2 - sign2.get_width()//2
             Y = consts.END_GAME_MENU_SIZE - 3*sign2.get_height()//2
             self.menu.blit(sign2, (X, Y))
+        # [online] Server connection error sign
         elif self.connError:
             sign2 = self.font.render("Couldn't establish connection with the server", True, consts.GRAY)
             X = consts.END_GAME_MENU_SIZE // 2 - sign2.get_width()//2
@@ -558,6 +579,7 @@ class Game:
                 self.online = True
             else:
                 self.connError = True
+        #todo
         elif self.SettingsBtn.isOver(self.mouse_pos):
             pass
 
@@ -568,11 +590,13 @@ class Game:
         self.RematchBtn.draw(self.menu, self.mouse_pos)
         self.MainMenuBtn.draw(self.menu, self.mouse_pos)
 
+        # draw sign
         if self.drawn:
             sign = self.FONT.render("It's a draw!", True, consts.GRAY)
             X = consts.END_GAME_MENU_SIZE // 2 - sign.get_width() // 2
             Y = consts.END_GAME_MENU_SIZE // 5 - sign.get_height() // 2
             self.menu.blit(sign, (X, Y))
+        # smo won, smo lost sign
         else:
             loser = self.FONT.render(f"{self.turn[0].upper() + self.turn[1:]} has lost!", True, consts.GRAY)
             self.menu.blit(loser, ((consts.END_GAME_MENU_SIZE - loser.get_width()) // 2, 3 * consts.END_GAME_MENU_SIZE // 10 - loser.get_height() //2))
@@ -581,6 +605,7 @@ class Game:
             winner = self.FONT.render(f"{color} has won!", True, consts.GRAY)
             self.menu.blit(winner, ((consts.END_GAME_MENU_SIZE - winner.get_width()) // 2, consts.END_GAME_MENU_SIZE // 10 - winner.get_height() //2))
         
+        #rematch requested sign
         if self.onlineRematch:
             sign = self.font.render("Opponent requests rematch", True, consts.GRAY)
             X = (consts.END_GAME_MENU_SIZE - sign.get_width())//2
